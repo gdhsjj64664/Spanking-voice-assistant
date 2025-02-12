@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SP语音报数助手</title>
+    <!-- 引入 Vue -->
+    <script src="https://unpkg.com/vue@3"></script>
+    <!-- 引入 Element Plus 样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <!-- 引入 Element Plus -->
+    <script src="https://unpkg.com/element-plus"></script>
+    <!-- 引入 Element Plus 图标 -->
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+
+    <style>
+        :root {
+            --background-color: #f0faff;
+            --text-color: #ff6b6b; /* 默认鲜艳的红色 */
+            --button-primary-bg: #409eff;
+            --button-primary-hover-bg: #66b1ff;
+            --button-warning-bg: #e6a23c;
+            --button-warning-hover-bg: #ebb563;
+            --button-success-bg: #67c23a;
+            --button-success-hover-bg: #85ce61;
+            --button-danger-bg: #f56c6c;
+            --button-danger-hover-bg: #f78989;
+            --button-text-color: #ffffff;
+        }
+
+        :root[data-theme="dark"] {
+            --background-color: #121212;
+            --text-color: #6aff6a; /* 默认鲜艳的绿色 */
+            --button-primary-bg: #bb86fc;
+            --button-primary-hover-bg: #c5a5f3;
+            --button-warning-bg: #ffcc00;
+            --button-warning-hover-bg: #ffcc00;
+            --button-success-bg: #388e3c;
+            --button-success-hover-bg: #4caf50;
+            --button-danger-bg: #b00020;
+            --button-danger-hover-bg: #f44336;
+            --button-text-color: #000000;
+        }
+
+        body {
+            background: var(--background-color);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+            color: var(--text-color);
+        }
+
+        .app-container {
+            max-width: 90vw; /* 使用视口宽度的90% */
+            margin: 2rem auto;
+            padding: 2.5rem;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            position: relative;
+        }
+
+        .title {
+            text-align: center;
+            color: var(--text-color);
+            margin-bottom: 2rem;
+            font-size: 2rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-container {
+            display: grid;
+            gap: 1.8rem;
+        }
+
+        .control-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); /* 自适应列数 */
+            gap: 12px;
+            margin-top: 2rem;
+        }
+
+        .status-box {
+            text-align: center;
+            margin-top: 2rem;
+            padding: 1.2rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .current-number {
+            font-size: 2.4rem;
+            color: var(--button-primary-bg);
+            font-weight: bold;
+            margin: 1rem 0;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .el-form-item__label {
+            font-weight: 500;
+            color: var(--text-color);
+            margin-bottom: 8px;
+        }
+
+        .el-input-number {
+            width: 100%;  
+            --el-input-number-controls-size: 36px;
+        }
+
+        .el-button {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 500;
+            width: 120px; /* 统一按钮宽度 */
+            height: 40px; /* 统一按钮高度 */
+            color: var(--button-text-color); /* 确保文字颜色可见 */
+        }
+
+        .el-button--primary {
+            background: var(--button-primary-bg);
+            border-color: var(--button-primary-bg);
+        }
+
+        .el-button--primary:hover {
+            background: var(--button-primary-hover-bg);
+            transform: translateY(-2px);
+        }
+
+        .el-button--warning {
+            background: var(--button-warning-bg);
+            border-color: var(--button-warning-bg);
+        }
+
+        .el-button--warning:hover {
+            background: var(--button-warning-hover-bg);
+            transform: translateY(-2px);
+        }
+
+        .el-button--success {
+            background: var(--button-success-bg);
+            border-color: var(--button-success-bg);
+        }
+
+        .el-button--success:hover {
+            background: var(--button-success-hover-bg);
+            transform: translateY(-2px);
+        }
+
+        .el-button--danger {
+            background: var(--button-danger-bg);
+            border-color: var(--button-danger-bg);
+        }
+
+        .el-button--danger:hover {
+            background: var(--button-danger-hover-bg);
+            transform: translateY(-2px);
+        }
+
+        /* 覆盖 Element Plus 的颜色选择器样式 */
+        .el-color-picker__confirm-btn {
+            background-color: #000000 !important; /* 黑色背景 */
+            color: #ffffff !important; /* 白色文字 */
+            border-color: #000000 !important; /* 黑色边框 */
+        }
+
+        .el-color-picker__confirm-btn:hover {
+            background-color: #333333 !important; /* 深色背景 */
+            color: #ffffff !important; /* 白色文字 */
+            border-color: #333333 !important; /* 深色边框 */
+        }
+
+        /* 确保“OK”按钮的文字颜色为黑色 */
+        .el-color-picker__confirm-btn span {
+            color: #000000 !important; /* 黑色文字 */
+        }
+
+        .el-color-picker__confirm-btn:hover span {
+            color: #000000 !important; /* 黑色文字 */
+        }
+
+        /* 媒体查询 */
+        @media (max-width: 600px) {
+            .app-container {
+                padding: 1.5rem;
+            }
+
+            .title {
+                font-size: 1.8rem;
+            }
+
+            .control-buttons {
+                grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            }
+
+            .current-number {
+                font-size: 2rem;
+            }
+
+            .el-button {
+                width: 100%; /* 在小屏幕上按钮宽度占满 */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="app-container">
+            <h1 class="title">SP语音报数助手</h1>
+            
+            <div class="form-container">
+                <el-form :model="form" label-position="top">
+                    <el-form-item label="计数方向">
+                        <el-radio-group v-model="form.direction">
+                            <el-radio label="asc" border>正序计数</el-radio>
+                            <el-radio label="desc" border>倒序计数</el-radio>
+                        </el-radio-group>
+                    </el-form-item>
+
+                    <el-row :gutter="20">
+                        <el-col :span="12">
+                            <el-form-item :label="directionLabel.start">
+                                <el-input-number
+                                    v-model="form.startNum"
+                                    :min="0"
+                                    controls-position="right"
+                                    :placeholder="directionPlaceholder.start"
+                                ></el-input-number>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item :label="directionLabel.end">
+                                <el-input-number
+                                    v-model="form.endNum"
+                                    :min="0"
+                                    controls-position="right"
+                                    :placeholder="directionPlaceholder.end"
+                                ></el-input-number>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+
+                    <el-form-item label="间隔时间（秒）">
+                        <el-input-number
+                            v-model="form.interval"
+                            :min="0.5"
+                            :step="0.5"
+                            controls-position="right"
+                            placeholder="请输入间隔时间"
+                        ></el-input-number>
+                    </el-form-item>
+
+                    <el-form-item label="自定义字体颜色">
+                        <el-color-picker v-model="customTextColor" show-alpha></el-color-picker>
+                    </el-form-item>
+
+                    <div class="control-buttons">
+                        <el-button 
+                            type="primary" 
+                            @click="handleStart"
+                            :disabled="isSpeaking"
+                            :icon="VideoPlay"
+                        >
+                            开始报数
+                        </el-button>
+
+                        <el-button 
+                            type="warning" 
+                            @click="handlePause"
+                            :disabled="!isSpeaking || isPaused"
+                            :icon="VideoPause"
+                        >
+                            暂停
+                        </el-button>
+
+                        <el-button 
+                            type="success" 
+                            @click="handleResume"
+                            :disabled="!isPaused"
+                            :icon="RefreshRight"
+                        >
+                            继续
+                        </el-button>
+
+                        <el-button 
+                            type="danger" 
+                            @click="handleCancel"
+                            :disabled="!isSpeaking"
+                            :icon="CircleClose"
+                        >
+                            取消
+                        </el-button>
+
+                        <el-button 
+                            type="info"   
+                            @click="toggleTheme"
+                            :icon="themeIcon"
+                        >
+                            {{ themeText }}
+                        </el-button>
+                    </div>
+                </el-form>
+
+                <div class="status-box">
+                    <p v-if="currentNumber !== null" class="current-number">{{ currentNumber }}</p>
+                    <p v-if="errorMessage" style="color: #f56c6c; font-size: 0.9rem;">{{ errorMessage }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+        const { ElSelect, ElOption, ElRadioGroup, ElRadio, ElInputNumber, ElButton, ElForm, ElFormItem, ElRow, ElCol, ElIcon, ElColorPicker } = ElementPlus;
+        const { VideoPlay, VideoPause, RefreshRight, CircleClose, Moon, Sunny } = ElementPlusIconsVue;
+
+        createApp({
+            components: {
+                ElRadioGroup,
+                ElRadio,
+                ElInputNumber,
+                ElButton,
+                ElForm,
+                ElFormItem,
+                ElRow,
+                ElCol,
+                ElIcon,
+                ElColorPicker,
+                VideoPlay,
+                VideoPause,
+                RefreshRight,
+                CircleClose,
+                Moon,
+                Sunny
+            },
+            data() {
+                return {
+                    form: {
+                        startNum: 0,
+                        endNum: 0,
+                        interval: 1,
+                        direction: 'asc'
+                    },
+                    isSpeaking: false,
+                    isPaused: false,
+                    currentNumber: null,
+                    errorMessage: '',
+                    controller: {
+                        current: null,
+                        resolvePause: null
+                    },
+                    theme: 'light',
+                    customTextColor: '#ff6b6b', // 默认鲜艳的红色
+                };
+            },
+            computed: {
+                directionLabel() {
+                    return {
+                        start: this.form.direction === 'asc' ? '起始数字' : '结束数字',
+                        end: this.form.direction === 'asc' ? '结束数字' : '起始数字'
+                    };
+                },
+                directionPlaceholder() {
+                    return {
+                        start: this.form.direction === 'asc' ? '输入较小值' : '输入较大值',
+                        end: this.form.direction === 'asc' ? '输入较大值' : '输入较小值'
+                    };
+                },
+                themeText() {
+                    return this.theme === 'light' ? '黑暗模式' : '白天模式';
+                },
+                themeIcon() {
+                    return this.theme === 'light' ? Moon : Sunny;
+                }
+            },
+            watch: {
+                customTextColor(newColor) {
+                    this.updateTextColor(newColor);
+                }
+            },
+            mounted() {
+                this.applyTheme();  
+                this.updateTextColor(this.customTextColor);
+            },
+            methods: {
+                validateForm() {
+                    if (this.form.startNum > this.form.endNum && this.form.direction === 'asc') {
+                        this.errorMessage = '起始数字不能大于结束数字';
+                        return false;
+                    }
+                    if (this.form.startNum < this.form.endNum && this.form.direction === 'desc') {
+                        this.errorMessage = '起始数字不能小于结束数字';
+                        return false;
+                    }
+                    if (this.form.interval <= 0) {
+                        this.errorMessage = '间隔时间必须大于0';
+                        return false;
+                    }
+                    this.errorMessage = '';
+                    return true;
+                },
+                async handleStart() {
+                    if (!this.validateForm()) return;
+
+                    this.isSpeaking = true;
+                    this.currentNumber = this.form.startNum;
+                    try {
+                        await this.executeCountdown();
+                    } catch (error) {
+                        console.error('执行报数过程中发生错误:', error);
+                    } finally {
+                        this.resetState();
+                    }
+                },
+                async executeCountdown() {
+                    while ((this.form.direction === 'asc' && this.currentNumber <= this.form.endNum) ||
+                           (this.form.direction === 'desc' && this.currentNumber >= this.form.endNum)) {
+                        try {
+                            await this.speakNumber(this.currentNumber);
+                        } catch (error) {
+                            console.error('语音合成失败:', error);
+                        }
+
+                        if (this.isPaused) {
+                            await new Promise(resolve => this.controller.resolvePause = resolve);
+                        }
+
+                        if (!this.isSpeaking) break;
+
+                        await this.wait(this.form.interval * 1000);
+
+                        this.currentNumber += this.form.direction === 'asc' ? 1 : -1;
+                    }
+                },
+                handlePause() {
+                    this.isPaused = true;
+                },
+                handleResume() {
+                    this.isPaused = false;
+                    this.controller.resolvePause?.();
+                },
+                handleCancel() {
+                    this.isSpeaking = false;
+                    this.controller.resolvePause?.();
+                },
+                speakNumber(number) {
+                    return new Promise((resolve) => {
+                        const utterance = new SpeechSynthesisUtterance(number.toString());  
+                        utterance.onend = resolve;
+                        window.speechSynthesis.speak(utterance);
+                    });
+                },
+                wait(ms) {
+                    return new Promise(resolve => setTimeout(resolve, ms));
+                },
+                resetState() {
+                    this.isSpeaking = false;
+                    this.isPaused = false;
+                    this.currentNumber = null;
+                },
+                toggleTheme() {
+                    this.theme = this.theme === 'light' ? 'dark' : 'light';
+                    this.applyTheme();
+                },
+                applyTheme() {
+                    document.documentElement.setAttribute('data-theme', this.theme);
+                },
+                updateTextColor(newColor) {
+                    document.documentElement.style.setProperty('--text-color', newColor);
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
