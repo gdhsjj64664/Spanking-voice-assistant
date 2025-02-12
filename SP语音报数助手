@@ -321,8 +321,136 @@
         </div>
     </div>
 
-    <!-- 引入新的 JavaScript 文件 -->
-    <script src="app.js"></script>
+    <script>
+        const { createApp, ref, reactive, computed, watch } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
+        const { VideoPlay, VideoPause, RefreshRight, CircleClose, Sunny, Moon } = ElementPlusIconsVue;
+
+        const app = createApp({
+            setup() {
+                const form = reactive({
+                    direction: 'asc',
+                    startNum: 0,
+                    endNum: 100,
+                    interval: 1,
+                });
+
+                const customTextColor = ref('rgba(255, 107, 107, 1)');
+                const isSpeaking = ref(false);
+                const isPaused = ref(false);
+                const currentNumber = ref(null);
+                const errorMessage = ref('');
+                const speech = ref(null);
+                const speechConfig = ref({
+                    volume: 1,
+                    rate: 1,
+                    pitch: 1,
+                });
+
+                const directionLabel = computed(() => ({
+                    start: form.direction === 'asc' ? '起始数字' : '结束数字',
+                    end: form.direction === 'asc' ? '结束数字' : '起始数字',
+                }));
+
+                const directionPlaceholder = computed(() => ({
+                    start: form.direction === 'asc' ? '请输入起始数字' : '请输入结束数字',
+                    end: form.direction === 'asc' ? '请输入结束数字' : '请输入起始数字',
+                }));
+
+                const themeText = computed(() => document.documentElement.getAttribute('data-theme') === 'dark' ? '切换到浅色模式' : '切换到深色模式');
+                const themeIcon = computed(() => document.documentElement.getAttribute('data-theme') === 'dark' ? Sunny : Moon);
+
+                const toggleTheme = () => {
+                    const currentTheme = document.documentElement.getAttribute('data-theme');
+                    document.documentElement.setAttribute('data-theme', currentTheme === 'dark' ? 'light' : 'dark');
+                };
+
+                const handleStart = () => {
+                    if (form.startNum > form.endNum && form.direction === 'asc') {
+                        errorMessage.value = '起始数字不能大于结束数字';
+                        return;
+                    }
+                    if (form.startNum < form.endNum && form.direction === 'desc') {
+                        errorMessage.value = '结束数字不能大于起始数字';
+                        return;
+                    }
+                    errorMessage.value = '';
+                    isSpeaking.value = true;
+                    isPaused.value = false;
+                    currentNumber.value = form.startNum;
+                    speech.value = new SpeechSynthesisUtterance(currentNumber.value.toString());
+                    speech.value.lang = 'zh-CN';
+                    speech.value.volume = speechConfig.value.volume;
+                    speech.value.rate = speechConfig.value.rate;
+                    speech.value.pitch = speechConfig.value.pitch;
+                    speech.value.onend = () => {
+                        if (!isPaused.value) {
+                            setTimeout(() => {
+                                if (form.direction === 'asc') {
+                                    currentNumber.value++;
+                                } else {
+                                    currentNumber.value--;
+                                }
+                                if ((form.direction === 'asc' && currentNumber.value <= form.endNum) || (form.direction === 'desc' && currentNumber.value >= form.endNum)) {
+                                    speech.value.text = currentNumber.value.toString();
+                                    speech.value.lang = 'zh-CN';
+                                    speech.value.volume = speechConfig.value.volume;
+                                    speech.value.rate = speechConfig.value.rate;
+                                    speech.value.pitch = speechConfig.value.pitch;
+                                    speechSynthesis.speak(speech.value);
+                                } else {
+                                    isSpeaking.value = false;
+                                }
+                            }, form.interval * 1000);
+                        }
+                    };
+                    speechSynthesis.speak(speech.value);
+                };
+
+                const handlePause = () => {
+                    speechSynthesis.pause();
+                    isPaused.value = true;
+                };
+
+                const handleResume = () => {
+                    speechSynthesis.resume();
+                    isPaused.value = false;
+                };
+
+                const handleCancel = () => {
+                    speechSynthesis.cancel();
+                    isSpeaking.value = false;
+                    isPaused.value = false;
+                    currentNumber.value = null;
+                };
+
+                return {
+                    form,
+                    customTextColor,
+                    isSpeaking,
+                    isPaused,
+                    currentNumber,
+                    errorMessage,
+                    directionLabel,
+                    directionPlaceholder,
+                    themeText,
+                    themeIcon,
+                    toggleTheme,
+                    handleStart,
+                    handlePause,
+                    handleResume,
+                    handleCancel,
+                    VideoPlay,
+                    VideoPause,
+                    RefreshRight,
+                    CircleClose,
+                };
+            },
+        });
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
     <!-- 署名 -->
     <div style="text-align: center; margin-top: 20px; font-size: 0.9rem; color: #888;">
         此程序为公益程序，作者: <a href="https://t.me/spankinglihua" target="_blank">spankinglihua</a>
