@@ -115,7 +115,7 @@
         }
 
         .el-input-number {
-            width: 100%;  
+            width: 100%;
             --el-input-number-controls-size: 36px;
         }
 
@@ -304,7 +304,7 @@
                         </el-button>
 
                         <el-button 
-                            type="info"   
+                            type="info" 
                             @click="toggleTheme"
                             :icon="themeIcon"
                         >
@@ -321,167 +321,11 @@
         </div>
     </div>
 
-    <script>
-        const { createApp } = Vue;
-        const { ElSelect, ElOption, ElRadioGroup, ElRadio, ElInputNumber, ElButton, ElForm, ElFormItem, ElRow, ElCol, ElIcon, ElColorPicker } = ElementPlus;
-        const { VideoPlay, VideoPause, RefreshRight, CircleClose, Moon, Sunny } = ElementPlusIconsVue;
-
-        createApp({
-            components: {
-                ElRadioGroup,
-                ElRadio,
-                ElInputNumber,
-                ElButton,
-                ElForm,
-                ElFormItem,
-                ElRow,
-                ElCol,
-                ElIcon,
-                ElColorPicker,
-                VideoPlay,
-                VideoPause,
-                RefreshRight,
-                CircleClose,
-                Moon,
-                Sunny
-            },
-            data() {
-                return {
-                    form: {
-                        startNum: 0,
-                        endNum: 0,
-                        interval: 1,
-                        direction: 'asc'
-                    },
-                    isSpeaking: false,
-                    isPaused: false,
-                    currentNumber: null,
-                    errorMessage: '',
-                    controller: {
-                        current: null,
-                        resolvePause: null
-                    },
-                    theme: 'light',
-                    customTextColor: '#ff6b6b', // 默认鲜艳的红色
-                };
-            },
-            computed: {
-                directionLabel() {
-                    return {
-                        start: this.form.direction === 'asc' ? '起始数字' : '结束数字',
-                        end: this.form.direction === 'asc' ? '结束数字' : '起始数字'
-                    };
-                },
-                directionPlaceholder() {
-                    return {
-                        start: this.form.direction === 'asc' ? '输入较小值' : '输入较大值',
-                        end: this.form.direction === 'asc' ? '输入较大值' : '输入较小值'
-                    };
-                },
-                themeText() {
-                    return this.theme === 'light' ? '黑暗模式' : '白天模式';
-                },
-                themeIcon() {
-                    return this.theme === 'light' ? Moon : Sunny;
-                }
-            },
-            watch: {
-                customTextColor(newColor) {
-                    this.updateTextColor(newColor);
-                }
-            },
-            mounted() {
-                this.applyTheme();  
-                this.updateTextColor(this.customTextColor);
-            },
-            methods: {
-                validateForm() {
-                    if (this.form.startNum > this.form.endNum && this.form.direction === 'asc') {
-                        this.errorMessage = '起始数字不能大于结束数字';
-                        return false;
-                    }
-                    if (this.form.startNum < this.form.endNum && this.form.direction === 'desc') {
-                        this.errorMessage = '起始数字不能小于结束数字';
-                        return false;
-                    }
-                    if (this.form.interval <= 0) {
-                        this.errorMessage = '间隔时间必须大于0';
-                        return false;
-                    }
-                    this.errorMessage = '';
-                    return true;
-                },
-                async handleStart() {
-                    if (!this.validateForm()) return;
-
-                    this.isSpeaking = true;
-                    this.currentNumber = this.form.startNum;
-                    try {
-                        await this.executeCountdown();
-                    } catch (error) {
-                        console.error('执行报数过程中发生错误:', error);
-                    } finally {
-                        this.resetState();
-                    }
-                },
-                async executeCountdown() {
-                    while ((this.form.direction === 'asc' && this.currentNumber <= this.form.endNum) ||
-                           (this.form.direction === 'desc' && this.currentNumber >= this.form.endNum)) {
-                        try {
-                            await this.speakNumber(this.currentNumber);
-                        } catch (error) {
-                            console.error('语音合成失败:', error);
-                        }
-
-                        if (this.isPaused) {
-                            await new Promise(resolve => this.controller.resolvePause = resolve);
-                        }
-
-                        if (!this.isSpeaking) break;
-
-                        await this.wait(this.form.interval * 1000);
-
-                        this.currentNumber += this.form.direction === 'asc' ? 1 : -1;
-                    }
-                },
-                handlePause() {
-                    this.isPaused = true;
-                },
-                handleResume() {
-                    this.isPaused = false;
-                    this.controller.resolvePause?.();
-                },
-                handleCancel() {
-                    this.isSpeaking = false;
-                    this.controller.resolvePause?.();
-                },
-                speakNumber(number) {
-                    return new Promise((resolve) => {
-                        const utterance = new SpeechSynthesisUtterance(number.toString());  
-                        utterance.onend = resolve;
-                        window.speechSynthesis.speak(utterance);
-                    });
-                },
-                wait(ms) {
-                    return new Promise(resolve => setTimeout(resolve, ms));
-                },
-                resetState() {
-                    this.isSpeaking = false;
-                    this.isPaused = false;
-                    this.currentNumber = null;
-                },
-                toggleTheme() {
-                    this.theme = this.theme === 'light' ? 'dark' : 'light';
-                    this.applyTheme();
-                },
-                applyTheme() {
-                    document.documentElement.setAttribute('data-theme', this.theme);
-                },
-                updateTextColor(newColor) {
-                    document.documentElement.style.setProperty('--text-color', newColor);
-                }
-            }
-        }).mount('#app');
-    </script>
+    <!-- 引入新的 JavaScript 文件 -->
+    <script src="app.js"></script>
+    <!-- 署名 -->
+    <div style="text-align: center; margin-top: 20px; font-size: 0.9rem; color: #888;">
+        此程序为公益程序，作者: <a href="https://t.me/spankinglihua" target="_blank">spankinglihua</a>
+    </div>
 </body>
 </html>
