@@ -1,4 +1,5 @@
-Spanking-voice-assistant
+使用地址：http://spankingcloud.cfd/
+Spanking-voice-assistant  
 打屁股语音助手
 SP小工具  语音小助手
 ![image](https://github.com/user-attachments/assets/3e715380-87b3-4363-9789-8efc7870f0a0)
