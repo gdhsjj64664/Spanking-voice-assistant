@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>语音报数助手</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- 主内容 -->
+        <div class="container">
+            <!-- 温馨提示框 -->
+            <div class="warning-banner">
+                <div>温馨提示</div>
+                <div>本程序为公益程序，如有花钱请立即退款。</div>
+                <div>如有问题请联系：</div>
+                <a href="https://t.me/spanking666_bot" target="_blank" class="contact-button">点击联系 Telegram</a>
+            </div>
+            <h1>语音报数助手</h1>
+            <div class="number-controls">
+                <input type="number" v-model="startNumber" placeholder="开始数字" min="1">
+                <input type="number" v-model="endNumber" placeholder="结束数字" min="1">
+                <button @click="startCounting" :disabled="isRunning">开始</button>
+                <button @click="pauseCounting" :disabled="!isRunning || isPaused">暂停</button>
+                <button @click="resumeCounting" :disabled="!isRunning || !isPaused">继续</button>
+                <button @click="cancelCounting" :disabled="!isRunning">强制取消</button>
+                <button @click="toggleOrder">{{ isAscending ? '正序' : '倒序' }}</button>
+            </div>
+            <!-- 分贝检测模块 -->
+            <div class="decibel-controls">
+                <input type="number" v-model="decibelThreshold" placeholder="分贝阈值" min="0">
+                <button @click="startDecibelDetection" :disabled="isDecibelDetectionRunning">开启分贝检测</button>
+                <button @click="stopDecibelDetection" :disabled="!isDecibelDetectionRunning">关闭分贝检测</button>
+            </div>
+            <div id="decibel-output">
+                当前分贝：{{ currentDecibel }} dB
+            </div>
+            <div id="output" :class="{ active: isRunning }">
+                {{ outputMessage }}
+            </div>
+            <!-- 添加下一页提示 -->
+            <div class="next-page-hint">
+                <p>这是第一页内容</p>
+                <a href="page2.html" class="next-page-link">下一页 →</a>
+                <a href="sp.html" class="next-page-link">SP小圈社群 →</a>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+<script>
+    // 启用触摸滑动支持
+    document.addEventListener('touchstart', function() {}, {passive: true});
+    
+    // 添加分贝检测功能
+    const app = Vue.createApp({
+        data() {
+            return {
+                // 添加缺失的数据属性
+                startNumber: 1,
+                endNumber: 10,
+                isRunning: false,
+                isPaused: false,
+                isAscending: true,
+                outputMessage: '',
+                
+                // 原有分贝检测相关属性
+                isDecibelDetectionRunning: false,
+                currentDecibel: 0,
+                decibelThreshold: 30,
+                decibelAudioContext: null,
+                decibelAnalyser: null,
+                decibelMicrophone: null,
+                decibelStream: null,
+                decibelDataArray: null,
+                speechAudioContext: null,
+                speechStream: null
+            }
+        },
+        methods: {
+            // 添加缺失的方法
+            toggleOrder() {
+                this.isAscending = !this.isAscending;
+            },
+            
+            pauseCounting() {
+                this.isPaused = true;
+            },
+            
+            resumeCounting() {
+                this.isPaused = false;
+                this.speakNumber();
+            },
+            
+            speakNumber() {
+                // 实现数字朗读逻辑
+                if (!this.isRunning || this.isPaused) return;
+                
+                const synth = window.speechSynthesis;
+                const current = this.isAscending ? this.startNumber++ : this.endNumber--;
+                this.outputMessage = current;
+                
+                const utterance = new SpeechSynthesisUtterance(current.toString());
+                utterance.lang = 'zh-CN';
+                synth.speak(utterance);
+                
+                if ((this.isAscending && this.startNumber <= this.endNumber) || 
+                    (!this.isAscending && this.endNumber >= this.startNumber)) {
+                    setTimeout(this.speakNumber, 1000);
+                } else {
+                    this.isRunning = false;
+                }
+            },
+            async startDecibelDetection() {
+                try {
+                    if (this.isDecibelDetectionRunning) return;
+                    
+                    // 使用独立的音频上下文
+                    this.decibelStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    this.decibelAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.decibelAnalyser = this.decibelAudioContext.createAnalyser();
+                    this.decibelMicrophone = this.decibelAudioContext.createMediaStreamSource(this.decibelStream);
+                    this.decibelMicrophone.connect(this.decibelAnalyser);
+                    
+                    this.decibelAnalyser.fftSize = 256;
+                    const bufferLength = this.decibelAnalyser.frequencyBinCount;
+                    this.decibelDataArray = new Uint8Array(bufferLength);
+                    
+                    this.isDecibelDetectionRunning = true;
+                    this.updateDecibel();
+                } catch (error) {
+                    console.error('麦克风访问错误:', error);
+                    alert('无法访问麦克风，请检查权限设置');
+                }
+            },
+            
+            updateDecibel() {
+                if (!this.isDecibelDetectionRunning) return;
+                
+                this.decibelAnalyser.getByteFrequencyData(this.decibelDataArray);
+                let sum = 0;
+                for (let i = 0; i < this.decibelDataArray.length; i++) {
+                    sum += this.decibelDataArray[i];
+                }
+                this.currentDecibel = Math.round(sum / this.decibelDataArray.length);
+                
+                requestAnimationFrame(this.updateDecibel);
+            },
+            
+            stopDecibelDetection() {
+                this.isDecibelDetectionRunning = false;
+                if (this.decibelStream) {
+                    this.decibelStream.getTracks().forEach(track => track.stop());
+                }
+                if (this.decibelAudioContext) {
+                    this.decibelAudioContext.close();
+                }
+                this.decibelAudioContext = null;
+                this.decibelAnalyser = null;
+                this.decibelMicrophone = null;
+                this.decibelStream = null;
+                this.decibelDataArray = null;
+            },
+            
+            async startCounting() {
+                try {
+                    // 语音报数使用独立的音频上下文
+                    this.speechStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    this.speechAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    this.isRunning = true;
+                    this.isPaused = false;
+                    this.speakNumber();
+                } catch (error) {
+                    console.error('语音报数初始化失败:', error);
+                    alert('无法访问麦克风，请检查权限设置');
+                }
+            },
+            
+            cancelCounting() {
+                // 清理语音报数的音频资源
+                if (this.speechStream) {
+                    this.speechStream.getTracks().forEach(track => track.stop());
+                }
+                if (this.speechAudioContext) {
+                    this.speechAudioContext.close();
+                }
+                this.speechAudioContext = null;
+                this.speechStream = null;
+                
+                this.isRunning = false;
+                this.isPaused = false;
+            }
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>

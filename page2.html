@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>神秘盲盒系统</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <!-- 温馨提示框 -->
+            <div class="warning-banner">
+                <strong>温馨提示：</strong><br>
+                本程序为公益程序，<br>
+                如有花钱请立即退款。<br>
+                如有问题请联系：<a href="https://t.me/spanking666_bot" target="_blank" class="contact-button">点击联系 Telegram</a>
+            </div>
+            <h1>神秘盲盒系统</h1>
+            
+            <!-- 盲盒内容管理区域 -->
+            <div class="mystery-box-controls">
+                <input type="text" v-model="newPunishment" placeholder="添加盲盒内容" @keyup.enter="addPunishment">
+                <button @click="addPunishment" class="add-btn">添加内容</button>
+                <button @click="clearPunishments" class="clear-btn">清空全部</button>
+                <button @click="startDefaultLottery" class="default-btn">默认抽奖</button>
+            </div>
+            
+            <!-- 盲盒内容列表 -->
+            <div class="mystery-box-list" v-if="punishments.length > 0">
+                <div class="list-header" @click="toggleList">
+                    <h3>盲盒内容列表</h3>
+                    <span class="toggle-icon" :class="{ 'collapsed': isListCollapsed }">▼</span>
+                </div>
+                <ul :class="{ 'collapsed': isListCollapsed }">
+                    <li v-for="(punishment, index) in punishments" :key="index">
+                        {{ punishment }}
+                        <button class="delete-btn" @click="removePunishment(index)">删除</button>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- 盲盒区域 -->
+            <div class="mystery-box-container">
+                <div class="mystery-box" :class="{ 'opening': isLotteryRunning }" @click="startLottery" v-if="!lotteryResult && !isLotteryRunning">
+                    <div class="box-lid"></div>
+                    <div class="box-body"></div>
+                </div>
+                
+                <!-- 盲盒结果显示 -->
+                <div class="mystery-box-result" v-if="lotteryResult" :class="{ active: lotteryResult }">
+                    <div class="result-content">
+                        {{ lotteryResult }}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 添加页面导航 -->
+            <div class="next-page-hint">
+                <a href="index.html" class="previous-page-link">← 上一页</a>
+                <a href="sp.html" class="next-page-link">SP小圈社群 →</a>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    // 启用触摸滑动支持
+    document.addEventListener('touchstart', function() {}, {passive: true});
+    
+    // 创建Vue应用
+    const app = Vue.createApp({
+        data() {
+            return {
+                // 惩罚项列表
+                punishments: [],
+                newPunishment: '',
+                
+                // 抽奖相关
+                isLotteryRunning: false,
+                lotteryResult: '',
+                lotteryInterval: null,
+                
+                // 语音合成
+                synth: window.speechSynthesis,
+                // 列表折叠状态
+                isListCollapsed: false
+            }
+        },
+        mounted() {
+            // 预设的惩罚工具列表
+            const defaultPunishments = [
+                '手掌 20下', '皮带 30下', '木勺 30下', '发刷 40下', '拖鞋 20下', '拍板 40下', '藤条 50下', '马鞭 50下', '皮拍 40下',
+                '桦木条 60下', '衣架 30下', '尺子 30下', '擀面杖 40下', '书本 20下', '砧板 30下', '单尾鞭 60下', '九尾鞭 70下', '蛇鞭 50下',
+                '皮鞭 60下', '麻绳鞭 50下', '乒乓球拍 30下', '苍蝇拍 20下', '痒痒挠 20下', '键盘 30下', '杂志 20下', '木梳 30下',
+                '砧板 40下', '木铲 30下', '木制按摩棒 30下', '木板 40下', '金属尺 50下', '汤勺 30下', '链条 50下', '衣夹 20下',
+                '金属发刷 40下', '橡胶管 40下', '浴巾 30下', '软鞭 40下', '尼龙绳 30下', '皮带对折 40下', '树枝 30下', '芦苇杆 30下',
+                '竹条 40下', '柳条 40下', '草编鞭 30下', '穿孔拍 50下', '带刺拍 50下', '可加热工具 60下', '震动拍 60下', '定制刻字工具 70下'
+            ];
+            
+            // 从本地存储加载惩罚项，如果没有则使用默认列表
+            const savedPunishments = localStorage.getItem('punishments');
+            if (savedPunishments) {
+                this.punishments = JSON.parse(savedPunishments);
+            } else {
+                this.punishments = defaultPunishments;
+                this.savePunishments();
+            }
+        },
+        methods: {
+            // 添加惩罚项
+            addPunishment() {
+                if (this.newPunishment.trim()) {
+                    this.punishments.push(this.newPunishment.trim());
+                    this.newPunishment = '';
+                    this.savePunishments();
+                }
+            },
+            
+            // 移除惩罚项
+            removePunishment(index) {
+                this.punishments.splice(index, 1);
+                this.savePunishments();
+            },
+            
+            // 清空所有惩罚项
+            clearPunishments() {
+                if (confirm('确定要清空所有惩罚项吗？')) {
+                    this.punishments = [];
+                    this.savePunishments();
+                }
+            },
+            
+            // 保存惩罚项到本地存储
+            savePunishments() {
+                localStorage.setItem('punishments', JSON.stringify(this.punishments));
+            },
+            
+            // 开始抽奖
+            startLottery() {
+                if (this.punishments.length === 0) return;
+                
+                this.isLotteryRunning = true;
+                this.lotteryResult = '';
+                
+                // 快速切换显示不同的惩罚项，产生抽奖效果
+                let counter = 0;
+                this.lotteryInterval = setInterval(() => {
+                    const randomIndex = Math.floor(Math.random() * this.punishments.length);
+                    this.lotteryResult = this.punishments[randomIndex];
+                    
+                    // 抽奖速度逐渐变慢
+                    counter++;
+                    if (counter > 20) {
+                        clearInterval(this.lotteryInterval);
+                        this.lotteryInterval = setInterval(() => {
+                            const randomIndex = Math.floor(Math.random() * this.punishments.length);
+                            this.lotteryResult = this.punishments[randomIndex];
+                        }, 200); // 减慢速度
+                        
+                        // 3秒后停止
+                        setTimeout(() => {
+                            this.stopLottery();
+                        }, 3000);
+                    }
+                }, 100);
+            },
+            
+            // 停止抽奖并播报结果
+            stopLottery() {
+                if (!this.isLotteryRunning) return;
+                
+                clearInterval(this.lotteryInterval);
+                this.isLotteryRunning = false;
+                
+                // 语音播报抽奖结果
+                if (this.lotteryResult) {
+                    // 分析结果文本，确保数字后面有"下"字
+                    let speakText = this.lotteryResult;
+                    const match = speakText.match(/(\d+)(?!.*下)/); // 匹配最后一个没有跟"下"字的数字
+                    if (match) {
+                        speakText = speakText.replace(match[1], `${match[1]}下`);
+                    }
+                    const utterance = new SpeechSynthesisUtterance(speakText);
+                    utterance.lang = 'zh-CN';
+                    this.synth.speak(utterance);
+                }
+            },
+            
+            // 切换列表折叠状态
+            toggleList() {
+                this.isListCollapsed = !this.isListCollapsed;
+            },
+
+            // 使用默认列表开始抽奖
+            startDefaultLottery() {
+                // 重置为默认列表
+                this.punishments = [
+                    '手掌 20下', '皮带 30下', '木勺 30下', '发刷 40下', '拖鞋 20下', '拍板 40下', '藤条 50下', '马鞭 50下', '皮拍 40下',
+                    '桦木条 60下', '衣架 30下', '尺子 30下', '擀面杖 40下', '书本 20下', '砧板 30下', '单尾鞭 60下', '九尾鞭 70下', '蛇鞭 50下',
+                    '皮鞭 60下', '麻绳鞭 50下', '乒乓球拍 30下', '苍蝇拍 20下', '痒痒挠 20下', '键盘 30下', '杂志 20下', '木梳 30下',
+                    '砧板 40下', '木铲 30下', '木制按摩棒 30下', '木板 40下', '金属尺 50下', '汤勺 30下', '链条 50下', '衣夹 20下',
+                    '金属发刷 40下', '橡胶管 40下', '浴巾 30下', '软鞭 40下', '尼龙绳 30下', '皮带对折 40下', '树枝 30下', '芦苇杆 30下',
+                    '竹条 40下', '柳条 40下', '草编鞭 30下', '穿孔拍 50下', '带刺拍 50下', '可加热工具 60下', '震动拍 60下', '定制刻字工具 70下'
+                ];
+                this.savePunishments();
+                // 立即开始抽奖
+                this.startLottery();
+            }
+        }
+    }).mount('#app');
+    </script>
+</body>
+</html>
