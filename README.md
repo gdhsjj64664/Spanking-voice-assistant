@@ -2,7 +2,7 @@
 
 一款创新、互动性强的语音控制工具，专为追求刺激与趣味体验的用户设计。通过击打声音触发语音报数。
 
-🌐 **使用地址**：http://spankingcloud.cfd/  （1.0） https://cs.spankingcloud.cfd/（2.0）
+🌐 **使用地址**：http://spankingcloud.cfd/  （1.0） https://cs.spankingcloud.cfd/    （2.0）
 🗣️ 支持中文语音报数，响应灵敏，效果逼真  
 
 ---
